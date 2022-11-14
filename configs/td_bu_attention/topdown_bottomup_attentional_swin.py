@@ -10,6 +10,10 @@ resume_from = None
 workflow = [('train', 1)]
 opencv_num_threads = 0
 mp_start_method = 'fork'
+work_dir = "output"
+gpu_ids = [0]
+seed = 3
+device = "cuda"
 auto_scale_lr = dict(enable=False, base_batch_size=192)
 model = dict(
 	type='FasterRCNN',
@@ -63,14 +67,14 @@ model = dict(
 			in_channels=256,
 			fc_out_channels=1024,
 			roi_feat_size=7,
-			num_classes=4,
+			num_classes=40,
 			bbox_coder=dict(
 				type='DeltaXYWHBBoxCoder',  # RCNN_bbox_pred
 				target_means=[0., 0., 0., 0.],
 				target_stds=[0.1, 0.1, 0.2, 0.2]),
 			reg_class_agnostic=False,
 			loss_cls=dict(
-				type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
+				type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
 		),
 	),
 	# model training and testing settings
@@ -126,8 +130,8 @@ model = dict(
 		# soft-nms is also supported for rcnn testing
 		# e.g., nms=dict(type='soft_nms', iou_threshold=0.5, min_score=0.05)
 	))
-dataset_type = 'CocoDataset'
-data_root = 'data/coco/'
+dataset_type = 'Stanford40Dataset'
+data_root = '/var/home/cagdas/storage/dataset/Stanford40/'
 img_norm_cfg = dict(
 	mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
@@ -180,9 +184,9 @@ data = dict(
 		type='RepeatDataset',
 		times=10,
 		dataset=dict(
-			type='CocoDataset',
-			ann_file='data/coco/annotations/instances_train2017.json',
-			img_prefix='data/coco/train2017/',
+			type='Stanford40Dataset',
+			ann_file='/var/home/cagdas/storage/dataset/Stanford40/COCOAnnotations/instances_train.json',
+			img_prefix='/var/home/cagdas/storage/dataset/Stanford40/JPEGImages',
 			pipeline=[
 				dict(type='LoadImageFromFile'),
 				dict(type='LoadAnnotations', with_bbox=True),
@@ -208,9 +212,9 @@ data = dict(
 				dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels'])
 			])),
 	val=dict(
-		type='CocoDataset',
-		ann_file='data/coco/annotations/instances_val2017.json',
-		img_prefix='data/coco/val2017/',
+		type='Stanford40Dataset',
+		ann_file='/var/home/cagdas/storage/dataset/Stanford40/COCOAnnotations/instances_test.json',
+		img_prefix='/var/home/cagdas/storage/dataset/Stanford40/JPEGImages',
 		pipeline=[
 			dict(type='LoadImageFromFile'),
 			dict(
@@ -231,9 +235,9 @@ data = dict(
 				])
 		]),
 	test=dict(
-		type='CocoDataset',
-		ann_file='data/coco/annotations/instances_val2017.json',
-		img_prefix='data/coco/val2017/',
+		type='Stanford40Dataset',
+		ann_file='/var/home/cagdas/storage/dataset/Stanford40/COCOAnnotations/instances_test.json',
+		img_prefix='/var/home/cagdas/storage/dataset/Stanford40/JPEGImages',
 		pipeline=[
 			dict(type='LoadImageFromFile'),
 			dict(
@@ -261,6 +265,6 @@ lr_config = dict(
 	warmup_iters=4000,
 	warmup_ratio=0.0001,
 	step=[24, 28])
-runner = dict(type='EpochBasedRunner', max_epochs=30)
-evaluation = dict(interval=1, metric=['bbox'])
+runner = dict(type='EpochBasedRunner', max_epochs=5)
+evaluation = dict(interval=1, start=200, metric='accuracy', metric_options={'topk': (1,)})
 find_unused_parameters = True
