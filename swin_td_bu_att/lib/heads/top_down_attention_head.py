@@ -200,7 +200,7 @@ class TopDownBottomUpAttentionHead(BBoxHead):
 		for fc in self.reg_fcs:
 			x_reg = self.relu(fc(x_reg))
 
-		image_feats, attention_scores = self.attention(x_cls, 1)  # top down attention
+		image_feats, attention_scores = self.attention(x_cls, 24)  # top down attention
 
 		cls_score = self.fc_cls(image_feats) if self.with_cls else None
 		bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
