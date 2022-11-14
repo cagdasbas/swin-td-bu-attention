@@ -19,5 +19,5 @@ TODO
 
 - [x] Implement modules
 - [x] Implement functioning test code
-- [ ] Fix training parameters in [config file](configs/td_bu_attention/topdown_bottomup_attentional_swin.py)
+- [x] Fix training parameters in [config file](configs/td_bu_attention/topdown_bottomup_attentional_swin.py)
 - [ ] Implement missing training functionality
