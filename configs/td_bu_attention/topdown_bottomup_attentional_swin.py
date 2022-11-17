@@ -51,10 +51,8 @@ model = dict(
 		bbox_coder=dict(
 			type='DeltaXYWHBBoxCoder',
 			target_means=[.0, .0, .0, .0],
-			target_stds=[1.0, 1.0, 1.0, 1.0]),
-		loss_cls=dict(
-			type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
-		loss_bbox=dict(type='L1Loss', loss_weight=1.0)),
+			target_stds=[1.0, 1.0, 1.0, 1.0])
+	),
 	roi_head=dict(
 		type='TDBURoIHead',
 		bbox_roi_extractor=dict(
@@ -257,7 +255,7 @@ data = dict(
 					dict(type='Collect', keys=['img'])
 				])
 		]))
-optimizer = dict(type='SGD', lr=0.003, momentum=0.9, weight_decay=0.0005)
+optimizer = dict(type='SGD', lr=0.03, momentum=0.9, weight_decay=0.0005)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 lr_config = dict(
 	policy='step',

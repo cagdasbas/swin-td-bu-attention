@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import xmltodict
 from mmdet.datasets import DATASETS, CustomDataset
 

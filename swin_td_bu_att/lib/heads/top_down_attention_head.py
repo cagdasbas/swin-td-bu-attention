@@ -1,9 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from mmcv.cnn import ConvModule
-from mmdet.models import BBoxHead
-from mmdet.models.builder import HEADS
+from mmdet.models import BBoxHead, Accuracy
+from mmdet.models.builder import HEADS, build_loss
 from mmdet.models.utils import build_linear_layer
 
 from swin_td_bu_att.lib.attention.attention import Attention
@@ -56,6 +57,16 @@ class TopDownBottomUpAttentionHead(BBoxHead):
 		self.fc_out_channels = fc_out_channels
 		self.conv_cfg = conv_cfg
 		self.norm_cfg = norm_cfg
+
+		self.compute_loss = build_loss(dict(type='CrossEntropyLoss', loss_weight=1.0))
+
+		topk = 1
+		if isinstance(topk, int):
+			topk = (topk,)
+		for _topk in topk:
+			assert _topk > 0, 'Top-k should be larger than 0'
+		self.topk = topk
+		self.compute_accuracy = Accuracy(topk=self.topk)
 
 		# add shared convs and fcs
 		self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -201,56 +212,30 @@ class TopDownBottomUpAttentionHead(BBoxHead):
 		for fc in self.reg_fcs:
 			x_reg = self.relu(fc(x_reg))
 
-		image_feats, attention_scores = self.attention(x_cls, 24)  # top down attention
+		image_feats, attention_scores = self.attention(x_cls, 1)  # top down attention
 
 		cls_score = self.fc_cls(image_feats) if self.with_cls else None
 		bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
 
+		#cls_score = F.softmax(cls_score, dim=1)
+
 		return cls_score, bbox_pred, spatial_attention_scores, attention_scores
 
-	def loss(self, cls_score, gt_label, bbox_pred, rois, bbox_targets):
+	def loss(self, cls_score, gt_label):
 		num_samples = len(cls_score)
 		losses = dict()
+		_gt_label = torch.as_tensor(gt_label).cuda()
 		# compute loss
-		loss = self.compute_loss(
-			cls_score, gt_label, avg_factor=num_samples)
-		if self.cal_acc:
-			# compute accuracy
-			acc = self.compute_accuracy(cls_score, gt_label)
+		loss = self.compute_loss(cls_score, _gt_label, avg_factor=num_samples)
+		# compute accuracy
+		if False:
+			acc = self.compute_accuracy(cls_score, _gt_label)
 			assert len(acc) == len(self.topk)
 			losses['accuracy'] = {
 				f'top-{k}': a
 				for k, a in zip(self.topk, acc)
 			}
-		losses['loss'] = loss
-		if bbox_pred is not None:
-			bg_class_ind = self.num_classes
-			# 0~self.num_classes-1 are FG, self.num_classes is BG
-			pos_inds = (labels >= 0) & (labels < bg_class_ind)
-			# do not perform bounding box regression for BG anymore.
-			if pos_inds.any():
-				if self.reg_decoded_bbox:
-					# When the regression loss (e.g. `IouLoss`,
-					# `GIouLoss`, `DIouLoss`) is applied directly on
-					# the decoded bounding boxes, it decodes the
-					# already encoded coordinates to absolute format.
-					bbox_pred = self.bbox_coder.decode(rois[:, 1:], bbox_pred)
-				if self.reg_class_agnostic:
-					pos_bbox_pred = bbox_pred.view(
-						bbox_pred.size(0), 4)[pos_inds.type(torch.bool)]
-				else:
-					pos_bbox_pred = bbox_pred.view(
-						bbox_pred.size(0), -1,
-						4)[pos_inds.type(torch.bool),
-					       labels[pos_inds.type(torch.bool)]]
-				losses['loss_bbox'] = self.loss_bbox(
-					pos_bbox_pred,
-					bbox_targets[pos_inds.type(torch.bool)],
-					bbox_weights[pos_inds.type(torch.bool)],
-					avg_factor=bbox_targets.size(0),
-					reduction_override=reduction_override)
-			else:
-				losses['loss_bbox'] = bbox_pred[pos_inds].sum()
+		losses['loss_cls'] = loss
 		return losses
 
 	def forward_train(self, cls_score, gt_label, **kwargs):

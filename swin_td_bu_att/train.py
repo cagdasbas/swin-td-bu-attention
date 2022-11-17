@@ -1,3 +1,4 @@
+import logging
 import os.path as osp
 
 import mmcv
@@ -8,7 +9,7 @@ from mmdet.models import build_detector
 
 from swin_td_bu_att.release import __release__
 
-print("release ver: %s", __release__)
+logging.info("release ver: %s", __release__)
 
 cfg = Config.fromfile('./configs/td_bu_attention/topdown_bottomup_attentional_swin.py')
 

@@ -104,7 +104,7 @@ class TDBURoIHead(BaseRoIHead, TDBUTestMixin):
 			bbox_results = self._bbox_forward_train(x, sampling_results,
 			                                        gt_bboxes, gt_labels,
 			                                        img_metas)
-			losses.update(bbox_results['loss_bbox'])
+			losses.update(bbox_results['loss_cls'])
 
 		# mask head forward and loss
 		if self.with_mask:
@@ -138,12 +138,10 @@ class TDBURoIHead(BaseRoIHead, TDBUTestMixin):
 
 		bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
 		                                          gt_labels, self.train_cfg)
-		loss_cls, loss_bbox = self.bbox_head.loss(bbox_results['cls_score'],
-		                                          gt_labels,
-		                                          bbox_results['bbox_pred'], rois,
-		                                          *bbox_targets)
+		loss_cls = self.bbox_head.loss(bbox_results['cls_score'],
+		                                          gt_labels)
 
-		bbox_results.update(loss_cls=loss_cls, loss_bbox=loss_bbox)
+		bbox_results.update(loss_cls=loss_cls)
 		return bbox_results
 
 	def _mask_forward_train(self, x, sampling_results, bbox_feats, gt_masks,
