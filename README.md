@@ -13,7 +13,9 @@ Implementation of top-down bottom-up attentional modules on top of [Swin Transfo
 python -m swin_td_bu_att demo.jpg configs/td_bu_attention/topdown_bottomup_attentional_swin.py swin_tiny_patch4_window7_224.pth --device cuda --out-file result.jpg
 ```
 #### Train
-TODO
+```shell
+python swin_td_bu_att/train.py
+```
 
 ### Current implementation progress:
 
